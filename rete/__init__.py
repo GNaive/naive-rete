@@ -136,6 +136,10 @@ class BetaMemory(BetaNode):
             new_token = Token(None, wme)
         else:
             new_token = Token(token, wme)
+
+        # avoiding duplicate tokens
+        if new_token in self.items:
+            return
         self.items.append(new_token)
         for child in self.children:
             child.left_activation(new_token)
@@ -148,7 +152,7 @@ class JoinNode(BetaNode):
     def __init__(self, children, parent, alpha_memory, tests):
         """
         :type children:
-        :type parent: BetaMemory
+        :type parent: BetaNode
         :type alpha_memory: AlphaMemory
         :type tests: list of TestAtJoinNode
         """
@@ -201,7 +205,8 @@ class TestAtJoinNode:
         self.field_of_arg2 = field_of_arg2
 
     def __repr__(self):
-        return "<TestAtJoinNode WME.%s=Condition%s.%s?>" % (self.field_of_arg1, self.condition_number_of_arg2, self.field_of_arg2)
+        return "<TestAtJoinNode WME.%s=Condition%s.%s?>" % (
+            self.field_of_arg1, self.condition_number_of_arg2, self.field_of_arg2)
 
     def __eq__(self, other):
         return isinstance(other, TestAtJoinNode) and \

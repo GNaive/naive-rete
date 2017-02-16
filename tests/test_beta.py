@@ -47,3 +47,26 @@ def test_network():
     t1 = Token(t0, wmes[4])
     t2 = Token(t1, wmes[8])
     assert match_c0c1c2.items[0] == t2
+
+
+def test_dup():
+    # setup
+    net = Network()
+    c0 = Cond(Var('x'), 'self', Var('y'))
+    c1 = Cond(Var('x'), 'color', 'red')
+    c2 = Cond(Var('y'), 'color', 'red')
+    net.add_production([c0, c1, c2])
+
+    wmes = [
+        WME('B1', 'self', 'B1'),
+        WME('B1', 'color', 'red'),
+    ]
+    for wme in wmes:
+        net.add_wme(wme)
+    # end
+
+    am = net.build_or_share_alpha_memory(c2)
+    join_on_value_y = am.successors[1]
+    match_for_all = join_on_value_y.children[0]
+
+    assert len(match_for_all.items) == 1
