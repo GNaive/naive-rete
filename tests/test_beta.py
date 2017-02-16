@@ -48,6 +48,12 @@ def test_network():
     t2 = Token(t1, wmes[8])
     assert match_c0c1c2.items[0] == t2
 
+    net.remove_wme(wmes[0])
+    assert am0.items == [wmes[1], wmes[3], wmes[7]]
+    assert len(match_c0.items) == 3
+    assert len(match_c0c1.items) == 1
+    assert len(match_c0c1c2.items) == 0
+
 
 def test_dup():
     # setup
