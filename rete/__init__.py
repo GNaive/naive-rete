@@ -66,9 +66,11 @@ class WME:
         self.identifier = identifier
         self.attribute = attribute
         self.value = value
+        self.alpha_mems = []  # the ones containing this WME
+        self.tokens = []  # the ones containing this WME
 
     def __repr__(self):
-        return "<WME (%s ^%s %s)>" % (self.identifier, self.attribute, self.value)
+        return "<WME(%s ^%s %s)>" % (self.identifier, self.attribute, self.value)
 
 
 class AlphaMemory:
@@ -86,27 +88,41 @@ class AlphaMemory:
         :type wme: WME
         """
         self.items.append(wme)
+        wme.alpha_mems.append(self)
         for child in self.successors:
             child.right_activation(wme)
 
 
 class Token:
 
-    def __init__(self, parent, wme):
+    def __init__(self, parent, wme, node=None):
         """
         :type wme: WME
         :type parent: Token
         """
-        if not isinstance(parent, Token):
-            self.wmes = [wme]
-        else:
-            self.wmes = [w for w in parent.wmes] + [wme]
+        self.wme = wme
+        self.parent = parent
+        self.node = node  # points to memory this token is in
+        self.children = []  # the ones with parent = this token
+
+        self.wme.tokens.append(self)
+        if self.parent:
+            self.parent.children.append(self)
 
     def __repr__(self):
         return "<Token %s>" % self.wmes
 
     def __eq__(self, other):
-        return self.wmes == other.wmes
+        return self.wme == other.wme and self.parent == other.parent
+
+    @property
+    def wmes(self):
+        ret = [self.wme]
+        t = self
+        while t.parent:
+            t = t.parent
+            ret.insert(0, t.wme)
+        return ret
 
 
 class BetaNode(object):
@@ -114,6 +130,19 @@ class BetaNode(object):
     def __init__(self, children=None, parent=None):
         self.children = children if children else []
         self.parent = parent
+
+    def left_activation(self, token, wme):
+        """
+        :type token: Token
+        :type wme: WME
+        """
+        pass
+
+    def right_activation(self, wme):
+        """
+        :type wme: WME
+        """
+        pass
 
 
 class BetaMemory(BetaNode):
@@ -130,15 +159,14 @@ class BetaMemory(BetaNode):
 
     def left_activation(self, token, wme):
         """
+        :type wme: WME
         :type token: Token
         """
-        if not token:
-            new_token = Token(None, wme)
-        else:
-            new_token = Token(token, wme)
-
+        new_token = Token(token, wme, node=self)
         # avoiding duplicate tokens
         if new_token in self.items:
+            new_token.parent.children.pop()
+            new_token.wme.tokens.pop()
             return
         self.items.append(new_token)
         for child in self.children:
@@ -295,6 +323,26 @@ class Network:
     def add_wme(self, wme):
         self.alpha_root.activation(wme)
 
+    def remove_wme(self, wme):
+        """
+        :type wme: WME
+        """
+        for am in wme.alpha_mems:
+            am.items.remove(wme)
+        for t in wme.tokens:
+            self.delete_token(t)
+
+    def delete_token(self, token):
+        """
+        :type token: Token
+        """
+        for child in token.children:
+            self.delete_token(child)
+        token.node.items.remove(token)
+        token.wme.tokens.remove(token)
+        if token.parent:
+            token.parent.children.remove(token)
+
     def build_or_share_alpha_memory(self, condition):
         """
         :type condition: Condition
@@ -314,15 +362,15 @@ class Network:
         :type earlier_conds: list of Condition
         :rtype: list of TestAtJoinNode
         """
-        tests = []
+        result = []
         for v in c.vars:
             for idx, cond in enumerate(earlier_conds):
                 v2 = cond.contain(v)
                 if not v2:
                     continue
                 t = TestAtJoinNode(v.field, idx, v2.field)
-                tests.append(t)
-        return tests
+                result.append(t)
+        return result
 
     @classmethod
     def build_or_share_join_node(cls, parent, alpha_memory, tests):
