@@ -6,15 +6,15 @@ FIELDS = ['identifier', 'attribute', 'value']
 
 class ConstantTestNode:
 
-    def __init__(self, field_to_test, field_must_equal=None, alpha_memory=None, children=None):
+    def __init__(self, field_to_test, field_must_equal=None, amem=None, children=None):
         """
         :type field_to_test: str
         :type children: list of ConstantTestNode
-        :type alpha_memory: AlphaMemory
+        :type amem: AlphaMemory
         """
         self.field_to_test = field_to_test
         self.field_must_equal = field_must_equal
-        self.amem = alpha_memory
+        self.amem = amem
         self.children = children if children else list()
 
     def __repr__(self):
@@ -49,15 +49,23 @@ class ConstantTestNode:
                 return am
         f, v = path.pop(0)
         assert f in FIELDS, "`%s` not in %s" % (f, FIELDS)
-        next_node = None
-        for child in node.children:
-            if child.field_to_test == f and child.field_must_equal == v:
-                next_node = child
-                break
-        if not next_node:
-            next_node = ConstantTestNode(f, v, children=[])
-            node.children.append(next_node)
+        next_node = cls.build_or_share_constant_test_node(node, f, v)
         return cls.build_or_share_alpha_memory(next_node, path)
+
+    @classmethod
+    def build_or_share_constant_test_node(cls, parent, field, symbol):
+        """
+        :rtype: ConstantTestNode
+        :type symbol: str
+        :type field: str
+        :type parent: ConstantTestNode
+        """
+        for child in parent.children:
+            if child.field_to_test == field and child.field_must_equal == symbol:
+                return child
+        new_node = ConstantTestNode(field, symbol, children=[])
+        parent.children.append(new_node)
+        return new_node
 
 
 class WME:
@@ -66,8 +74,9 @@ class WME:
         self.identifier = identifier
         self.attribute = attribute
         self.value = value
-        self.alpha_mems = []  # the ones containing this WME
+        self.amems = []  # the ones containing this WME
         self.tokens = []  # the ones containing this WME
+        self.negative_join_result = []
 
     def __repr__(self):
         return "<WME(%s ^%s %s)>" % (self.identifier, self.attribute, self.value)
@@ -88,7 +97,7 @@ class AlphaMemory:
         :type wme: WME
         """
         self.items.append(wme)
-        wme.alpha_mems.append(self)
+        wme.amems.append(self)
         for child in self.successors:
             child.right_activation(wme)
 
@@ -100,12 +109,14 @@ class Token:
         :type wme: WME
         :type parent: Token
         """
-        self.wme = wme
         self.parent = parent
+        self.wme = wme
         self.node = node  # points to memory this token is in
         self.children = []  # the ones with parent = this token
+        self.join_results = []  # used only on tokens in negative nodes
 
-        self.wme.tokens.append(self)
+        if self.wme:
+            self.wme.tokens.append(self)
         if self.parent:
             self.parent.children.append(self)
 
@@ -124,19 +135,39 @@ class Token:
             ret.insert(0, t.wme)
         return ret
 
+    @classmethod
+    def delete_token_and_descendents(cls, token):
+        """
+        :type token: Token
+        """
+        for child in token.children:
+            cls.delete_token_and_descendents(child)
+        token.node.items.remove(token)
+        if token.wme:
+            token.wme.tokens.remove(token)
+        if token.parent:
+            token.parent.children.remove(token)
+        if isinstance(token.node, NegativeNode):
+            for jr in token.join_results:
+                jr.wme.negative_join_results.remove(jr)
+
+
+class NegativeJoinResult:
+
+    def __init__(self, owner, wme):
+        """
+        :type wme: WME
+        :type owner: Token
+        """
+        self.owner = owner
+        self.wme = wme
+
 
 class BetaNode(object):
 
     def __init__(self, children=None, parent=None):
         self.children = children if children else []
         self.parent = parent
-
-    def left_activation(self, token, wme):
-        """
-        :type token: Token
-        :type wme: WME
-        """
-        pass
 
     def right_activation(self, wme):
         """
@@ -165,7 +196,8 @@ class BetaMemory(BetaNode):
         new_token = Token(token, wme, node=self)
         # avoiding duplicate tokens
         if new_token in self.items:
-            new_token.parent.children.pop()
+            if new_token.parent:
+                new_token.parent.children.pop()
             new_token.wme.tokens.pop()
             return
         self.items.append(new_token)
@@ -177,15 +209,15 @@ class JoinNode(BetaNode):
 
     kind = 'join-node'
 
-    def __init__(self, children, parent, alpha_memory, tests):
+    def __init__(self, children, parent, amem, tests):
         """
         :type children:
         :type parent: BetaNode
-        :type alpha_memory: AlphaMemory
+        :type amem: AlphaMemory
         :type tests: list of TestAtJoinNode
         """
         super(JoinNode, self).__init__(children=children, parent=parent)
-        self.alpha_memory = alpha_memory
+        self.amem = amem
         self.tests = tests
 
     def right_activation(self, wme):
@@ -206,7 +238,7 @@ class JoinNode(BetaNode):
         """
         :type token: Token
         """
-        for wme in self.alpha_memory.items:
+        for wme in self.amem.items:
             if self.perform_join_test(token, wme):
                 for child in self.children:
                     child.left_activation(token, wme)
@@ -243,6 +275,59 @@ class TestAtJoinNode:
             self.condition_number_of_arg2 == other.condition_number_of_arg2
 
 
+class NegativeNode(BetaNode):
+
+    def __init__(self, children=None, parent=None, amem=None, tests=None):
+        """
+        :type amem: AlphaMemory
+        """
+        super(NegativeNode, self).__init__(children=children, parent=parent)
+        self.items = []
+        self.amem = amem
+        self.tests = tests if tests else []
+
+    def left_activation(self, token, wme):
+        """
+        :type wme: WME
+        :type token: Token
+        """
+        new_token = Token(token, wme, self)
+        self.items.append(new_token)
+        for item in self.amem.items:
+            if self.perform_join_test(new_token, item):
+                jr = NegativeJoinResult(new_token, item)
+                new_token.join_results.append(jr)
+                item.negative_join_result.append(jr)
+        if not new_token.join_results:
+            for child in self.children:
+                child.left_activation(new_token, None)
+
+    def right_activation(self, wme):
+        """
+        :type wme: WME
+        """
+        for t in self.items:
+            if self.perform_join_test(t, wme):
+                if not t.join_results:
+                    Token.delete_token_and_descendents(t)
+                jr = NegativeJoinResult(t, wme)
+                t.join_results.append(jr)
+                wme.negative_join_result.append(jr)
+
+    def perform_join_test(self, token, wme):
+        """
+        :type token: Token
+        :type wme: WME
+        """
+        for this_test in self.tests:
+            arg1 = getattr(wme, this_test.field_of_arg1)
+            wme2 = token.wmes[this_test.condition_number_of_arg2]
+            arg2 = getattr(wme2, this_test.field_of_arg2)
+            if arg1 != arg2:
+                return False
+        return True
+
+
 class Var:
 
     def __init__(self, symbol, field=None):
@@ -259,7 +344,7 @@ class Var:
 
 class Condition:
 
-    def __init__(self, identifier, attribute, value):
+    def __init__(self, identifier, attribute, value, positive=True):
         """
         (<x> ^self <y>)
         repr as:
@@ -272,6 +357,7 @@ class Condition:
         self.value = value
         self.attribute = attribute
         self.identifier = identifier
+        self.positive = positive
 
         for f in FIELDS:
             v = getattr(self, f)
@@ -297,11 +383,23 @@ class Condition:
                 return _v
         return None
 
+    def test(self, w):
+        """
+        :type w: WME
+        """
+        for f in FIELDS:
+            v = getattr(self, f)
+            if isinstance(v, Var):
+                continue
+            if v != getattr(w, f):
+                return False
+        return True
+
 
 class Network:
 
     def __init__(self):
-        self.alpha_root = ConstantTestNode('no-test')
+        self.alpha_root = ConstantTestNode('no-test', amem=AlphaMemory())
         self.beta_root = BetaMemory()
 
     def add_production(self, lhs):
@@ -310,15 +408,23 @@ class Network:
         """
         earlier_conditions = []
         current_node = self.beta_root
-        for c in lhs:
-            # get the join node
+        for idx, c in enumerate(lhs):
             tests = self.get_join_tests_from_condition(c, earlier_conditions)
             am = self.build_or_share_alpha_memory(c)
-            current_node = self.build_or_share_join_node(current_node, am, tests)
-
-            # get the beta memory node
-            current_node = self.build_or_share_beta_memory(current_node)
+            if c.positive:
+                # get the join node
+                current_node = self.build_or_share_join_node(current_node, am, tests)
+                if len(lhs) > idx + 1 and lhs[idx+1].positive or len(lhs) == idx + 1:
+                    # get the beta memory node
+                    current_node = self.build_or_share_beta_memory(current_node)
+            else:
+                # get the negative node
+                current_node = self.build_or_share_negative_node(current_node, am, tests)
             earlier_conditions.append(c)
+        return current_node
+
+    def remove_production(self, node):
+        self.delete_node_and_any_unused_ancestors(node)
 
     def add_wme(self, wme):
         self.alpha_root.activation(wme)
@@ -327,21 +433,15 @@ class Network:
         """
         :type wme: WME
         """
-        for am in wme.alpha_mems:
+        for am in wme.amems:
             am.items.remove(wme)
         for t in wme.tokens:
-            self.delete_token(t)
-
-    def delete_token(self, token):
-        """
-        :type token: Token
-        """
-        for child in token.children:
-            self.delete_token(child)
-        token.node.items.remove(token)
-        token.wme.tokens.remove(token)
-        if token.parent:
-            token.parent.children.remove(token)
+            Token.delete_token_and_descendents(t)
+        for jr in wme.negative_join_result:
+            jr.owner.join_results.remove(jr)
+            if not jr.owner.join_results:
+                for child in jr.owner.node.children:
+                    child.left_activation(jr.owner, None)
 
     def build_or_share_alpha_memory(self, condition):
         """
@@ -353,7 +453,11 @@ class Network:
             v = getattr(condition, f)
             if not isinstance(v, Var):
                 path.append((f, v))
-        return ConstantTestNode.build_or_share_alpha_memory(self.alpha_root, path)
+        am = ConstantTestNode.build_or_share_alpha_memory(self.alpha_root, path)
+        for w in self.alpha_root.amem.items:
+            if condition.test(w):
+                am.activation(w)
+        return am
 
     @classmethod
     def get_join_tests_from_condition(cls, c, earlier_conds):
@@ -373,19 +477,35 @@ class Network:
         return result
 
     @classmethod
-    def build_or_share_join_node(cls, parent, alpha_memory, tests):
+    def build_or_share_join_node(cls, parent, amem, tests):
         """
         :type parent: BetaNode
-        :type alpha_memory: AlphaMemory
+        :type amem: AlphaMemory
         :type tests: list of TestAtJoinNode
         :rtype: JoinNode
         """
         for child in parent.children:
-            if isinstance(child, JoinNode) and child.alpha_memory == alpha_memory and child.tests == tests:
+            if isinstance(child, JoinNode) and child.amem == amem and child.tests == tests:
                 return child
-        node = JoinNode([], parent, alpha_memory, tests)
+        node = JoinNode([], parent, amem, tests)
         parent.children.append(node)
-        alpha_memory.successors.append(node)
+        amem.successors.append(node)
+        return node
+
+    @classmethod
+    def build_or_share_negative_node(cls, parent, amem, tests):
+        """
+        :type parent: BetaNode
+        :type amem: AlphaMemory
+        :type tests: list of TestAtJoinNode
+        :rtype: JoinNode
+        """
+        for child in parent.children:
+            if isinstance(child, NegativeNode) and child.amem == amem and child.tests == tests:
+                return child
+        node = NegativeNode(parent=parent, amem=amem, tests=tests)
+        parent.children.append(node)
+        amem.successors.append(node)
         return node
 
     @classmethod
@@ -399,4 +519,35 @@ class Network:
                 return child
         node = BetaMemory(None, parent)
         parent.children.append(node)
+        cls.update_new_node_with_matches_from_above(node)
         return node
+
+    @classmethod
+    def update_new_node_with_matches_from_above(cls, new_node):
+        """
+        :type new_node: BetaNode
+        """
+        parent = new_node.parent
+        if isinstance(parent, BetaMemory):
+            for tok in parent.items:
+                parent.left_activation(tok)
+        elif isinstance(parent, JoinNode):
+            saved_list_of_children = parent.children
+            parent.children = [new_node]
+            for item in parent.amem.items:
+                parent.right_activation(item)
+            parent.children = saved_list_of_children
+
+    @classmethod
+    def delete_node_and_any_unused_ancestors(cls, node):
+        """
+        :type node: BetaNode
+        """
+        if isinstance(node, JoinNode):
+            node.amem.successors.remove(node)
+        else:
+            for item in node.items:
+                Token.delete_token_and_descendents(item)
+        node.parent.children.remove(node)
+        if not node.parent.children:
+            cls.delete_node_and_any_unused_ancestors(node.parent)
