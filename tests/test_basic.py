@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from rete import Condition as Cond, Var, WME
+from rete import Condition as Cond, Var, WME, NCCondition
 
 
 def test_condition_vars():
@@ -22,3 +22,10 @@ def test_condition_test():
     w1 = WME('B1', 'color', 'blue')
     assert c0.test(w0)
     assert not c0.test(w1)
+
+
+def test_ncc():
+    c0 = Cond(Var('a'), Var('b'), Var('c'))
+    c1 = NCCondition([Cond(Var('x'), 'color', 'red')])
+    c2 = NCCondition([c0, c1])
+    assert c2.number_of_conditions == 1
