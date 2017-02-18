@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
-from rete import Condition as Cond, Network, Var, WME, Token
+from rete import Condition as Cond, Var, WME, Token, NCCondition as NCC
+from rete.network import Network
 
 
 def test_network():
@@ -100,7 +101,11 @@ def test_negative_condition():
     ]
     for wme in wmes:
         net.add_wme(wme)
-    assert p0.items[0] == Token(Token(None, wmes[1]), wmes[6])
+    assert p0.items[0].wmes == [
+        WME('B1', 'on', 'B3'),
+        WME('B3', 'left-of', 'B4'),
+        None
+    ]
 
 
 def test_multi_productions():
@@ -140,3 +145,28 @@ def test_multi_productions():
 
     net.remove_production(p2)
     assert len(p2.items) == 0
+
+
+def test_ncc():
+    net = Network()
+    c0 = Cond(Var('x'), 'on', Var('y'))
+    c1 = Cond(Var('y'), 'left-of', Var('z'))
+    c2 = Cond(Var('z'), 'color', 'red')
+    c3 = Cond(Var('z'), 'on', Var('w'))
+
+    p0 = net.add_production([c0, c1, NCC([c2, c3])])
+    wmes = [
+        WME('B1', 'on', 'B2'),
+        WME('B1', 'on', 'B3'),
+        WME('B1', 'color', 'red'),
+        WME('B2', 'on', 'table'),
+        WME('B2', 'left-of', 'B3'),
+        WME('B2', 'color', 'blue'),
+        WME('B3', 'left-of', 'B4'),
+        WME('B3', 'on', 'table'),
+    ]
+    for wme in wmes:
+        net.add_wme(wme)
+    assert len(p0.items) == 2
+    net.add_wme(WME('B3', 'color', 'red'))
+    assert len(p0.items) == 1
