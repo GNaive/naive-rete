@@ -175,7 +175,7 @@ class Network:
         parent = new_node.parent
         if isinstance(parent, BetaMemory):
             for tok in parent.items:
-                parent.left_activation(tok)
+                new_node.left_activation(tok, None)
         elif isinstance(parent, JoinNode):
             saved_list_of_children = parent.children
             parent.children = [new_node]
