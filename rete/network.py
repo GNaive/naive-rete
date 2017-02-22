@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 
-import copy
-from rete.nodes import (
-    ConstantTestNode, AlphaMemory, BetaMemory, Token, FIELDS, Var,
-    TestAtJoinNode, JoinNode, NegativeNode, Condition, NCCondition,
-    BetaNode, NCCNode, NCCPartnerNode
-)
+from rete.ncc_node import NCCNode, NCCPartnerNode
+from rete.negative_node import NegativeNode
+from rete.alpha import AlphaMemory, ConstantTestNode
+from rete.join_node import JoinNode, TestAtJoinNode
+from rete.common import Token, BetaNode, Condition, FIELDS, Var, NCCondition
+from rete.beta_memory_node import BetaMemory
 
 
 class Network:
@@ -109,8 +109,7 @@ class Network:
         amem.successors.append(node)
         return node
 
-    @classmethod
-    def build_or_share_beta_memory(cls, parent):
+    def build_or_share_beta_memory(self, parent):
         """
         :type parent: BetaNode
         :rtype: BetaMemory
@@ -119,8 +118,11 @@ class Network:
             if isinstance(child, BetaMemory):
                 return child
         node = BetaMemory(None, parent)
+        # dummy top beta memory
+        if parent == self.beta_root:
+            node.items.append(Token(None, None))
         parent.children.append(node)
-        cls.update_new_node_with_matches_from_above(node)
+        self.update_new_node_with_matches_from_above(node)
         return node
 
     def build_or_share_ncc_nodes(self, parent, c, earlier_conds):

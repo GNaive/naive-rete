@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-from rete import ConstantTestNode, WME
+from rete.alpha import ConstantTestNode
+from rete.common import WME
 
 
 def test_root():

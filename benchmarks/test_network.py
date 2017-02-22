@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from rete import Condition as Cond, Var, WME
+from rete.common import Condition as Cond, Var, WME
 from rete.network import Network
 
 

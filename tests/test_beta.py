@@ -1,10 +1,31 @@
 # -*- coding: utf-8 -*-
 
-from rete import Condition as Cond, Var, WME, Token, NCCondition as NCC
+from rete.common import Condition as Cond, Var, WME, Token, NCCondition as NCC
 from rete.network import Network
 
 
-def test_network():
+def test_network_case0():
+    net = Network()
+    c0 = Cond('x', 'id', '1')
+    c1 = Cond('x', 'kind', '8')
+    p0 = net.add_production([c0, c1])
+
+    w0 = WME('x', 'id', '1')
+    w1 = WME('x', 'kind', '8')
+
+    net.add_wme(w0)
+    assert not p0.items
+
+    net.remove_wme(w0)
+    net.add_wme(w1)
+    assert not p0.items
+
+    net.add_wme(w0)
+    net.add_wme(w1)
+    assert p0.items
+
+
+def test_network_case1():
     # setup
     net = Network()
     c0 = Cond(Var('x'), 'on', Var('y'))
@@ -44,7 +65,7 @@ def test_network():
     assert len(match_c0c1.items) == 2
     assert len(match_c0c1c2.items) == 1
 
-    t0 = Token(None, wmes[0])
+    t0 = Token(Token(None, None), wmes[0])
     t1 = Token(t0, wmes[4])
     t2 = Token(t1, wmes[8])
     assert match_c0c1c2.items[0] == t2

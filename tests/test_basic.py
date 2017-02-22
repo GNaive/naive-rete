@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from rete import Condition as Cond, Var, WME, NCCondition
+from rete.common import Condition as Cond, Var, WME, NCCondition
 
 
 def test_condition_vars():
