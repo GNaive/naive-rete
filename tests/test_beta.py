@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from rete.common import Condition as Cond, Var, WME, Token, NCCondition as NCC
+from rete.common import Condition as Cond, WME, Token, NCCondition as NCC
 from rete.network import Network
 
 
@@ -28,9 +28,9 @@ def test_network_case0():
 def test_network_case1():
     # setup
     net = Network()
-    c0 = Cond(Var('x'), 'on', Var('y'))
-    c1 = Cond(Var('y'), 'left-of', Var('z'))
-    c2 = Cond(Var('z'), 'color', 'red')
+    c0 = Cond('$x', 'on', '$y')
+    c1 = Cond('$y', 'left-of', '$z')
+    c2 = Cond('$z', 'color', 'red')
     net.add_production([c0, c1, c2])
     # end
 
@@ -80,9 +80,9 @@ def test_network_case1():
 def test_dup():
     # setup
     net = Network()
-    c0 = Cond(Var('x'), 'self', Var('y'))
-    c1 = Cond(Var('x'), 'color', 'red')
-    c2 = Cond(Var('y'), 'color', 'red')
+    c0 = Cond('$x', 'self', '$y')
+    c1 = Cond('$x', 'color', 'red')
+    c2 = Cond('$y', 'color', 'red')
     net.add_production([c0, c1, c2])
 
     wmes = [
@@ -103,9 +103,9 @@ def test_dup():
 def test_negative_condition():
     # setup
     net = Network()
-    c0 = Cond(Var('x'), 'on', Var('y'))
-    c1 = Cond(Var('y'), 'left-of', Var('z'))
-    c2 = Cond(Var('z'), 'color', 'red', positive=False)
+    c0 = Cond('$x', 'on', '$y')
+    c1 = Cond('$y', 'left-of', '$z')
+    c2 = Cond('$z', 'color', 'red', positive=False)
     p0 = net.add_production([c0, c1, c2])
     # end
 
@@ -131,11 +131,11 @@ def test_negative_condition():
 
 def test_multi_productions():
     net = Network()
-    c0 = Cond(Var('x'), 'on', Var('y'))
-    c1 = Cond(Var('y'), 'left-of', Var('z'))
-    c2 = Cond(Var('z'), 'color', 'red')
-    c3 = Cond(Var('z'), 'on', 'table')
-    c4 = Cond(Var('z'), 'left-of', 'B4')
+    c0 = Cond('$x', 'on', '$y')
+    c1 = Cond('$y', 'left-of', '$z')
+    c2 = Cond('$z', 'color', 'red')
+    c3 = Cond('$z', 'on', 'table')
+    c4 = Cond('$z', 'left-of', 'B4')
 
     p0 = net.add_production([c0, c1, c2])
     p1 = net.add_production([c0, c1, c3, c4])
@@ -170,10 +170,10 @@ def test_multi_productions():
 
 def test_ncc():
     net = Network()
-    c0 = Cond(Var('x'), 'on', Var('y'))
-    c1 = Cond(Var('y'), 'left-of', Var('z'))
-    c2 = Cond(Var('z'), 'color', 'red')
-    c3 = Cond(Var('z'), 'on', Var('w'))
+    c0 = Cond('$x', 'on', '$y')
+    c1 = Cond('$y', 'left-of', '$z')
+    c2 = Cond('$z', 'color', 'red')
+    c3 = Cond('$z', 'on', '$w')
 
     p0 = net.add_production([c0, c1, NCC([c2, c3])])
     wmes = [

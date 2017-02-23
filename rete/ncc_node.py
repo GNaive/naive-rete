@@ -1,14 +1,14 @@
 from rete.common import Token, BetaNode
 
 
-class NCCNode(BetaNode):
+class NccNode(BetaNode):
 
     def __init__(self, children=None, parent=None, items=None, partner=None):
         """
-        :type partner: NCCPartnerNode
+        :type partner: NccPartnerNode
         :type items: list of rete.Token
         """
-        super(NCCNode, self).__init__(children=children, parent=parent)
+        super(NccNode, self).__init__(children=children, parent=parent)
         self.items = items if items else []
         self.partner = partner
 
@@ -28,15 +28,15 @@ class NCCNode(BetaNode):
                 child.left_activation(new_token, None)
 
 
-class NCCPartnerNode(BetaNode):
+class NccPartnerNode(BetaNode):
 
     def __init__(self, children=None, parent=None, ncc_node=None,
                  number_of_conditions=0, new_result_buffer=None):
         """
         :type new_result_buffer: list of rete.Token
-        :type ncc_node: NCCNode
+        :type ncc_node: NccNode
         """
-        super(NCCPartnerNode, self).__init__(children=children, parent=parent)
+        super(NccPartnerNode, self).__init__(children=children, parent=parent)
         self.ncc_node = ncc_node
         self.number_of_conditions = number_of_conditions
         self.new_result_buffer = new_result_buffer if new_result_buffer else []

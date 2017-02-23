@@ -10,27 +10,13 @@ class BetaNode(object):
         self.parent = parent
 
 
-class Var:
-
-    def __init__(self, symbol, field=None):
-        self.symbol = symbol
-        self.field = field
-
-    def __eq__(self, other):
-        if not isinstance(other, Var):
-            return False
-        if other.symbol != self.symbol:
-            return False
-        return True
-
-
 class Condition:
 
     def __init__(self, identifier, attribute, value, positive=True):
         """
         (<x> ^self <y>)
         repr as:
-        (Var('x'), 'self', Var('y'))
+        ('$x', 'self', '$y')
 
         :type value: Var or str
         :type attribute: Var or str
@@ -41,29 +27,28 @@ class Condition:
         self.identifier = identifier
         self.positive = positive
 
-        for f in FIELDS:
-            v = getattr(self, f)
-            if isinstance(v, Var):
-                v.field = f
-
     @property
     def vars(self):
+        """
+        :rtype: list
+        """
         ret = []
-        for f in FIELDS:
-            v = getattr(self, f)
-            if isinstance(v, Var):
-                ret.append(v)
+        for field in FIELDS:
+            v = getattr(self, field)
+            if is_var(v):
+                ret.append((field, v))
         return ret
 
     def contain(self, v):
         """
         :type v: Var
-        :rtype: Var
+        :rtype: bool
         """
-        for _v in self.vars:
-            if v == _v:
-                return _v
-        return None
+        for f in FIELDS:
+            _v = getattr(self, f)
+            if _v == v:
+                return f
+        return ""
 
     def test(self, w):
         """
@@ -71,7 +56,7 @@ class Condition:
         """
         for f in FIELDS:
             v = getattr(self, f)
-            if isinstance(v, Var):
+            if is_var(v):
                 continue
             if v != getattr(w, f):
                 return False
@@ -147,11 +132,11 @@ class Token:
         :type token: Token
         """
         from rete.negative_node import NegativeNode
-        from rete.ncc_node import NCCPartnerNode, NCCNode
+        from rete.ncc_node import NccPartnerNode, NccNode
 
         for child in token.children:
             cls.delete_token_and_descendents(child)
-        if not isinstance(token.node, NCCPartnerNode):
+        if not isinstance(token.node, NccPartnerNode):
             token.node.items.remove(token)
         if token.wme:
             token.wme.tokens.remove(token)
@@ -160,11 +145,11 @@ class Token:
         if isinstance(token.node, NegativeNode):
             for jr in token.join_results:
                 jr.wme.negative_join_results.remove(jr)
-        elif isinstance(token.node, NCCNode):
+        elif isinstance(token.node, NccNode):
             for result_tok in token.ncc_results:
                 result_tok.wme.tokens.remove(result_tok)
                 result_tok.parent.children.remove(result_tok)
-        elif isinstance(token.node, NCCPartnerNode):
+        elif isinstance(token.node, NccPartnerNode):
             token.owner.ncc_results.remove(token)
             if not token.owner.ncc_results:
                 for child in token.node.ncc_node.children:
@@ -182,3 +167,7 @@ class NCCondition:
     @property
     def number_of_conditions(self):
         return len(filter(lambda x: isinstance(x, Condition), self.cond_list))
+
+
+def is_var(v):
+    return v.startswith('$')
