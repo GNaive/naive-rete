@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 
-from rete.ncc_node import NCCNode, NCCPartnerNode
+from rete.ncc_node import NccNode, NccPartnerNode
 from rete.negative_node import NegativeNode
 from rete.alpha import AlphaMemory, ConstantTestNode
 from rete.join_node import JoinNode, TestAtJoinNode
-from rete.common import Token, BetaNode, Condition, FIELDS, Var, NCCondition
+from rete.common import Token, BetaNode, Condition, FIELDS, NCCondition, is_var
 from rete.beta_memory_node import BetaMemory
 
 
@@ -52,7 +52,7 @@ class Network:
         path = []
         for f in FIELDS:
             v = getattr(condition, f)
-            if not isinstance(v, Var):
+            if not is_var(v):
                 path.append((f, v))
         am = ConstantTestNode.build_or_share_alpha_memory(self.alpha_root, path)
         for w in self.alpha_root.amem.items:
@@ -68,12 +68,12 @@ class Network:
         :rtype: list of TestAtJoinNode
         """
         result = []
-        for v in c.vars:
+        for field_of_v, v in c.vars:
             for idx, cond in enumerate(earlier_conds):
-                v2 = cond.contain(v)
-                if not v2 or not cond.positive:
+                field_of_v2 = cond.contain(v)
+                if not field_of_v2 or not cond.positive:
                     continue
-                t = TestAtJoinNode(v.field, idx, v2.field)
+                t = TestAtJoinNode(field_of_v, idx, field_of_v2)
                 result.append(t)
         return result
 
@@ -133,10 +133,10 @@ class Network:
         """
         bottom_of_subnetwork = self.build_or_share_network_for_conditions(parent, c.cond_list, earlier_conds)
         for child in parent.children:
-            if isinstance(child, NCCNode) and child.partner.parent == bottom_of_subnetwork:
+            if isinstance(child, NccNode) and child.partner.parent == bottom_of_subnetwork:
                 return child
-        ncc_node = NCCNode([], parent)
-        ncc_partner = NCCPartnerNode([], bottom_of_subnetwork)
+        ncc_node = NccNode([], parent)
+        ncc_partner = NccPartnerNode([], bottom_of_subnetwork)
         parent.children.append(ncc_node)
         bottom_of_subnetwork.children.append(ncc_partner)
         ncc_node.partner = ncc_partner
@@ -188,7 +188,7 @@ class Network:
             for token in parent.items:
                 if not token.join_results:
                     new_node.left_activation(token, None)
-        elif isinstance(parent, NCCNode):
+        elif isinstance(parent, NccNode):
             for token in parent.items:
                 if not token.ncc_results:
                     new_node.left_activation(token, None)

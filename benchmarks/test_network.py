@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
-from rete.common import Condition as Cond, Var, WME
+from rete.common import Condition as Cond, WME
 from rete.network import Network
 
 
 def init_network():
     net = Network()
-    c0 = Cond(Var('x'), 'on', Var('y'))
-    c1 = Cond(Var('y'), 'left-of', Var('z'))
-    c2 = Cond(Var('z'), 'color', 'red')
+    c0 = Cond('$x', 'on', '$y')
+    c1 = Cond('$y', 'left-of', '$z')
+    c2 = Cond('$z', 'color', 'red')
     net.add_production([c0, c1, c2])
     return net
 
