@@ -2,6 +2,9 @@
 
 FIELDS = ['identifier', 'attribute', 'value']
 
+OP_EQUAL = 0
+OP_COMPARE = 1
+
 
 class BetaNode(object):
 
@@ -171,3 +174,9 @@ class NCCondition:
 
 def is_var(v):
     return v.startswith('$')
+
+
+def op(v):
+    if v.startswith('>') or v.startswith('<'):
+        return OP_COMPARE
+    return OP_EQUAL
