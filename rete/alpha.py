@@ -12,7 +12,7 @@ class ConstantTestNode:
         self.field_to_test = field_to_test
         self.field_must_equal = field_must_equal
         self.amem = amem
-        self.children = children if children else list()
+        self.children = children if children else []
 
     def __repr__(self):
         return "<ConstantTestNode %s=%s?>" % (self.field_to_test, self.field_must_equal)
