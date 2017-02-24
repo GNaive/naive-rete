@@ -191,3 +191,30 @@ def test_ncc():
     assert len(p0.items) == 2
     net.add_wme(WME('B3', 'color', 'red'))
     assert len(p0.items) == 1
+
+
+def test_compare_op():
+    net = Network()
+    c0 = Cond('$x', 'amount', '>100')
+    c1 = Cond('$x', 'amount', '<200')
+    c2 = Cond('$x', 'product_id', '101')
+
+    p0 = net.add_production([c0, c1, c2])
+    net.add_wme(WME('order-101', 'amount', '150'))
+    net.add_wme(WME('order-101', 'product_id', '101'))
+    assert p0.items
+
+
+def test_compare_op_negative():
+    net = Network()
+    c0 = Cond('$x', 'amount', '>100')
+    c1 = Cond('$x', 'amount', '>200', positive=False)
+
+    p0 = net.add_production([c0, c1])
+    w0 = WME('order-101', 'amount', '280')
+    net.add_wme(w0)
+    assert not p0.items
+
+    net.remove_wme(w0)
+    net.add_wme(WME('order-101', 'amount', '150'))
+    assert p0.items
