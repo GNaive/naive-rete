@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
-from rete.common import Condition as Cond, WME
+from rete.common import Has, Rule, WME
 from rete.network import Network
 
 
 def init_network():
     net = Network()
-    c0 = Cond('$x', 'on', '$y')
-    c1 = Cond('$y', 'left-of', '$z')
-    c2 = Cond('$z', 'color', 'red')
-    net.add_production([c0, c1, c2])
+    c0 = Has('$x', 'on', '$y')
+    c1 = Has('$y', 'left-of', '$z')
+    c2 = Has('$z', 'color', 'red')
+    net.add_production(Rule(c0, c1, c2))
     return net
 
 

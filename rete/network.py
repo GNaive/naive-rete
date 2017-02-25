@@ -4,7 +4,7 @@ from rete.ncc_node import NccNode, NccPartnerNode
 from rete.negative_node import NegativeNode
 from rete.alpha import AlphaMemory, ConstantTestNode
 from rete.join_node import JoinNode, TestAtJoinNode
-from rete.common import Token, BetaNode, Condition, FIELDS, NCCondition, is_var
+from rete.common import Token, BetaNode, FIELDS, Has, Neg, Rule, Ncc, is_var
 from rete.beta_memory_node import BetaMemory
 
 
@@ -16,10 +16,8 @@ class Network:
 
     def add_production(self, lhs):
         """
-        :type lhs: list of Condition
+        :type lhs: Rule
         """
-        if isinstance(lhs, Condition):
-            lhs = [lhs]
         current_node = self.build_or_share_network_for_conditions(self.beta_root, lhs, [])
         return self.build_or_share_beta_memory(current_node)
 
@@ -63,15 +61,15 @@ class Network:
     @classmethod
     def get_join_tests_from_condition(cls, c, earlier_conds):
         """
-        :type c: Condition
-        :type earlier_conds: list of Condition
+        :type c: Has
+        :type earlier_conds: list of BaseCondition
         :rtype: list of TestAtJoinNode
         """
         result = []
         for field_of_v, v in c.vars:
             for idx, cond in enumerate(earlier_conds):
                 field_of_v2 = cond.contain(v)
-                if not field_of_v2 or not cond.positive:
+                if not field_of_v2 or isinstance(cond, Neg):
                     continue
                 t = TestAtJoinNode(field_of_v, idx, field_of_v2)
                 result.append(t)
@@ -125,13 +123,13 @@ class Network:
         self.update_new_node_with_matches_from_above(node)
         return node
 
-    def build_or_share_ncc_nodes(self, parent, c, earlier_conds):
+    def build_or_share_ncc_nodes(self, parent, ncc, earlier_conds):
         """
-        :type earlier_conds: list of Condition
-        :type c: NCCondition
+        :type earlier_conds: Rule
+        :type ncc: Ncc
         :type parent: BetaNode
         """
-        bottom_of_subnetwork = self.build_or_share_network_for_conditions(parent, c.cond_list, earlier_conds)
+        bottom_of_subnetwork = self.build_or_share_network_for_conditions(parent, ncc, earlier_conds)
         for child in parent.children:
             if isinstance(child, NccNode) and child.partner.parent == bottom_of_subnetwork:
                 return child
@@ -141,30 +139,30 @@ class Network:
         bottom_of_subnetwork.children.append(ncc_partner)
         ncc_node.partner = ncc_partner
         ncc_partner.ncc_node = ncc_node
-        ncc_partner.number_of_conditions = c.number_of_conditions
+        ncc_partner.number_of_conditions = ncc.number_of_conditions
         self.update_new_node_with_matches_from_above(ncc_node)
         self.update_new_node_with_matches_from_above(ncc_partner)
         return ncc_node
 
-    def build_or_share_network_for_conditions(self, parent, conds, earlier_conds):
+    def build_or_share_network_for_conditions(self, parent, rule, earlier_conds):
         """
-        :type earlier_conds: list of Condition
+        :type earlier_conds: list of BaseCondition
         :type parent: BetaNode
-        :type conds: list of Condition
+        :type rule: Rule
         """
         current_node = parent
         conds_higher_up = earlier_conds
-        for cond in conds:
-            if isinstance(cond, Condition) and cond.positive:
+        for cond in rule:
+            if isinstance(cond, Neg):
+                tests = self.get_join_tests_from_condition(cond, conds_higher_up)
+                am = self.build_or_share_alpha_memory(cond)
+                current_node = self.build_or_share_negative_node(current_node, am, tests)
+            elif isinstance(cond, Has):
                 current_node = self.build_or_share_beta_memory(current_node)
                 tests = self.get_join_tests_from_condition(cond, conds_higher_up)
                 am = self.build_or_share_alpha_memory(cond)
                 current_node = self.build_or_share_join_node(current_node, am, tests)
-            elif isinstance(cond, Condition) and not cond.positive:
-                tests = self.get_join_tests_from_condition(cond, conds_higher_up)
-                am = self.build_or_share_alpha_memory(cond)
-                current_node = self.build_or_share_negative_node(current_node, am, tests)
-            elif isinstance(cond, NCCondition):
+            elif isinstance(cond, Ncc):
                 current_node = self.build_or_share_ncc_nodes(current_node, cond, conds_higher_up)
             conds_higher_up.append(cond)
         return current_node

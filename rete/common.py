@@ -13,9 +13,9 @@ class BetaNode(object):
         self.parent = parent
 
 
-class Condition:
+class Has:
 
-    def __init__(self, identifier, attribute, value, positive=True):
+    def __init__(self, identifier=None, attribute=None, value=None):
         """
         (<x> ^self <y>)
         repr as:
@@ -25,10 +25,12 @@ class Condition:
         :type attribute: Var or str
         :type identifier: Var or str
         """
-        self.value = value
-        self.attribute = attribute
         self.identifier = identifier
-        self.positive = positive
+        self.attribute = attribute
+        self.value = value
+
+    def __repr__(self):
+        return "(%s %s %s)" % (self.identifier, self.attribute, self.value)
 
     @property
     def vars(self):
@@ -64,6 +66,28 @@ class Condition:
             if v != getattr(w, f):
                 return False
         return True
+
+
+class Neg(Has):
+
+    def __repr__(self):
+        return "-(%s %s %s)" % (self.identifier, self.attribute, self.value)
+
+
+class Rule(list):
+
+    def __init__(self, *args):
+        self.extend(args)
+
+
+class Ncc(Rule):
+
+    def __repr__(self):
+        return "-%s" % super(Ncc, self).__repr__()
+
+    @property
+    def number_of_conditions(self):
+        return len(filter(lambda x: isinstance(x, Has), self))
 
 
 class WME:
@@ -103,7 +127,7 @@ class Token:
         self.children = []  # the ones with parent = this token
         self.join_results = []  # used only on tokens in negative nodes
         self.ncc_results = []
-        self.owner = None  # NCC
+        self.owner = None  # Ncc
 
         if self.wme:
             self.wme.tokens.append(self)
@@ -157,19 +181,6 @@ class Token:
             if not token.owner.ncc_results:
                 for child in token.node.ncc_node.children:
                     child.left_activation(token.owner, None)
-
-
-class NCCondition:
-
-    def __init__(self, cond_list):
-        """
-        :type cond_list: list of Condition
-        """
-        self.cond_list = cond_list
-
-    @property
-    def number_of_conditions(self):
-        return len(filter(lambda x: isinstance(x, Condition), self.cond_list))
 
 
 def is_var(v):
