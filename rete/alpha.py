@@ -17,6 +17,9 @@ class ConstantTestNode:
     def __repr__(self):
         return "<ConstantTestNode %s=%s?>" % (self.field_to_test, self.field_must_equal)
 
+    def dump(self):
+        return "%s=%s?" % (self.field_to_test, self.field_must_equal)
+
     def activation(self, wme):
         """
         :type wme: rete.WME
