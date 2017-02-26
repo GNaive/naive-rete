@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import cStringIO
 from rete.ncc_node import NccNode, NccPartnerNode
 from rete.negative_node import NegativeNode
 from rete.alpha import AlphaMemory, ConstantTestNode
@@ -13,6 +14,7 @@ class Network:
     def __init__(self):
         self.alpha_root = ConstantTestNode('no-test', amem=AlphaMemory())
         self.beta_root = BetaNode()
+        self.buf = None
 
     def add_production(self, lhs):
         """
@@ -42,6 +44,51 @@ class Network:
                 for child in jr.owner.node.children:
                     child.left_activation(jr.owner, None)
 
+    def dump(self):
+        self.buf = cStringIO.StringIO()
+        self.buf.write('digraph {\n')
+        self.dump_beta(self.beta_root)
+        self.dump_alpha(self.alpha_root)
+        self.dump_alpha2beta(self.alpha_root)
+        self.buf.write('}')
+        return self.buf.getvalue()
+
+    def dump_alpha(self, node):
+        """
+        :type node: ConstantTestNode
+        """
+        if node == self.alpha_root:
+            self.buf.write("    subgraph cluster_0 {\n")
+            self.buf.write("    label = alpha\n")
+        for child in node.children:
+            self.buf.write('    "%s" -> "%s";\n' % (node.dump(), child.dump()))
+            self.dump_alpha(child)
+        if node == self.alpha_root:
+            self.buf.write("    }\n")
+
+    def dump_alpha2beta(self, node):
+        """
+        :type node: ConstantTestNode
+        """
+        if node.amem:
+            for child in node.amem.successors:
+                self.buf.write('    "%s" -> "%s";\n' % (node.dump(), child.dump()))
+        for child in node.children:
+            self.dump_alpha2beta(child)
+
+    def dump_beta(self, node):
+        """
+        :type node: BetaNode
+        """
+        if node == self.beta_root:
+            self.buf.write("    subgraph cluster_1 {\n")
+            self.buf.write("    label = beta\n")
+        for child in node.children:
+            self.buf.write('    "%s" -> "%s";\n' % (node.dump(), child.dump()))
+            self.dump_beta(child)
+        if node == self.beta_root:
+            self.buf.write("    }\n")
+
     def build_or_share_alpha_memory(self, condition):
         """
         :type condition: Condition
@@ -62,7 +109,7 @@ class Network:
     def get_join_tests_from_condition(cls, c, earlier_conds):
         """
         :type c: Has
-        :type earlier_conds: list of BaseCondition
+        :type earlier_conds: Rule
         :rtype: list of TestAtJoinNode
         """
         result = []

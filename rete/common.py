@@ -12,6 +12,9 @@ class BetaNode(object):
         self.children = children if children else []
         self.parent = parent
 
+    def dump(self):
+        return "%s %s" % (self.__class__.__name__, id(self))
+
 
 class Has:
 
