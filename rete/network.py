@@ -83,6 +83,8 @@ class Network:
         if node == self.beta_root:
             self.buf.write("    subgraph cluster_1 {\n")
             self.buf.write("    label = beta\n")
+        if isinstance(node, NccPartnerNode):
+            self.buf.write('    "%s" -> "%s";\n' % (node.dump(), node.ncc_node.dump()))
         for child in node.children:
             self.buf.write('    "%s" -> "%s";\n' % (node.dump(), child.dump()))
             self.dump_beta(child)
@@ -115,8 +117,10 @@ class Network:
         result = []
         for field_of_v, v in c.vars:
             for idx, cond in enumerate(earlier_conds):
+                if isinstance(cond, Ncc) or isinstance(cond, Neg):
+                    continue
                 field_of_v2 = cond.contain(v)
-                if not field_of_v2 or isinstance(cond, Neg):
+                if not field_of_v2:
                     continue
                 t = TestAtJoinNode(field_of_v, idx, field_of_v2)
                 result.append(t)
