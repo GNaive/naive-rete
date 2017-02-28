@@ -3,7 +3,7 @@
 FIELDS = ['identifier', 'attribute', 'value']
 
 OP_EQUAL = 0
-OP_COMPARE = 1
+OP_XRANGE = 1
 
 
 class BetaNode(object):
@@ -191,6 +191,6 @@ def is_var(v):
 
 
 def op(v):
-    if v.startswith('>') or v.startswith('<'):
-        return OP_COMPARE
+    if v.startswith('in xrange'):
+        return OP_XRANGE
     return OP_EQUAL

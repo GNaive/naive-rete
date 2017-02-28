@@ -193,28 +193,10 @@ def test_ncc():
     assert len(p0.items) == 1
 
 
-def test_compare_op():
+def test_xrange_op():
     net = Network()
-    c0 = Has('$x', 'amount', '>100')
-    c1 = Has('$x', 'amount', '<200')
-    c2 = Has('$x', 'product_id', '101')
+    c0 = Has('$x', 'amount', 'in xrange(100, 200)')
 
-    p0 = net.add_production(Rule(c0, c1, c2))
-    net.add_wme(WME('order-101', 'amount', '150'))
-    net.add_wme(WME('order-101', 'product_id', '101'))
-    assert p0.items
-
-
-def test_compare_op_negative():
-    net = Network()
-    c0 = Has('$x', 'amount', '>100')
-    c1 = Neg('$x', 'amount', '>200')
-
-    p0 = net.add_production(Rule(c0, c1))
-    w0 = WME('order-101', 'amount', '280')
-    net.add_wme(w0)
-    assert not p0.items
-
-    net.remove_wme(w0)
+    p0 = net.add_production(Rule(c0))
     net.add_wme(WME('order-101', 'amount', '150'))
     assert p0.items
