@@ -5,6 +5,7 @@ from rete.ncc_node import NccNode, NccPartnerNode
 from rete.negative_node import NegativeNode
 from rete.alpha import AlphaMemory, ConstantTestNode
 from rete.join_node import JoinNode, TestAtJoinNode
+from rete.pnode import PNode
 from rete.common import Token, BetaNode, FIELDS, Has, Neg, Rule, Ncc, is_var
 from rete.beta_memory_node import BetaMemory
 
@@ -16,12 +17,13 @@ class Network:
         self.beta_root = BetaNode()
         self.buf = None
 
-    def add_production(self, lhs):
+    def add_production(self, lhs, **kwargs):
         """
+        :type kwargs:
         :type lhs: Rule
         """
         current_node = self.build_or_share_network_for_conditions(self.beta_root, lhs, [])
-        return self.build_or_share_beta_memory(current_node)
+        return self.build_or_share_p(current_node, **kwargs)
 
     def remove_production(self, node):
         self.delete_node_and_any_unused_ancestors(node)
@@ -170,6 +172,20 @@ class Network:
         # dummy top beta memory
         if parent == self.beta_root:
             node.items.append(Token(None, None))
+        parent.children.append(node)
+        self.update_new_node_with_matches_from_above(node)
+        return node
+
+    def build_or_share_p(self, parent, **kwargs):
+        """
+        :type kwargs:
+        :type parent: BetaNode
+        :rtype: PNode
+        """
+        for child in parent.children:
+            if isinstance(child, PNode):
+                return child
+        node = PNode(None, parent, **kwargs)
         parent.children.append(node)
         self.update_new_node_with_matches_from_above(node)
         return node
