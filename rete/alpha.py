@@ -1,4 +1,4 @@
-from rete.common import FIELDS, OP_EQUAL, op, OP_COMPARE
+from rete.common import FIELDS, OP_EQUAL, op, OP_XRANGE
 
 
 class ConstantTestNode:
@@ -28,8 +28,8 @@ class ConstantTestNode:
             v = getattr(wme, self.field_to_test)
             if op(self.field_must_equal) == OP_EQUAL and v != self.field_must_equal:
                 return False
-            elif op(self.field_must_equal) == OP_COMPARE:
-                if not eval("%s%s" % (v, self.field_must_equal)):
+            elif op(self.field_must_equal) == OP_XRANGE:
+                if not eval("%s %s" % (v, self.field_must_equal)):
                     return False
         if self.amem:
             self.amem.activation(wme)
