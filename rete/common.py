@@ -93,6 +93,17 @@ class Ncc(Rule):
         return len(filter(lambda x: isinstance(x, Has), self))
 
 
+class Filter:
+    def __init__(self, tmpl):
+        self.tmpl = tmpl
+
+
+class Bind:
+    def __init__(self, tmp, bind):
+        self.tmpl = tmp
+        self.bind = bind
+
+
 class WME:
 
     def __init__(self, identifier, attribute, value):
@@ -119,10 +130,11 @@ class WME:
 
 class Token:
 
-    def __init__(self, parent, wme, node=None):
+    def __init__(self, parent, wme, node=None, binding=None):
         """
         :type wme: WME
         :type parent: Token
+        :type binding: dict
         """
         self.parent = parent
         self.wme = wme
@@ -131,6 +143,7 @@ class Token:
         self.join_results = []  # used only on tokens in negative nodes
         self.ncc_results = []
         self.owner = None  # Ncc
+        self.binding = binding if binding else {}  # {"$x": "B1"}
 
         if self.wme:
             self.wme.tokens.append(self)
@@ -155,6 +168,23 @@ class Token:
             t = t.parent
             ret.insert(0, t.wme)
         return ret
+
+    def get_binding(self, v):
+        t = self
+        ret = t.binding.get(v)
+        while not ret and t.parent:
+            t = t.parent
+            ret = t.binding.get(v)
+        return ret
+
+    def all_binding(self):
+        path = [self]
+        if path[0].parent:
+            path.insert(0, path[0].parent)
+        binding = {}
+        for t in path:
+            binding.update(t.binding)
+        return binding
 
     @classmethod
     def delete_token_and_descendents(cls, token):

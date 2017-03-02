@@ -12,12 +12,13 @@ class NccNode(BetaNode):
         self.items = items if items else []
         self.partner = partner
 
-    def left_activation(self, t, w):
+    def left_activation(self, t, w, binding=None):
         """
         :type w: rete.WME
         :type t: rete.Token
+        :type binding: dict
         """
-        new_token = Token(t, w, self)
+        new_token = Token(t, w, self, binding)
         self.items.append(new_token)
         for result in self.partner.new_result_buffer:
             self.partner.new_result_buffer.remove(result)
@@ -41,12 +42,13 @@ class NccPartnerNode(BetaNode):
         self.number_of_conditions = number_of_conditions
         self.new_result_buffer = new_result_buffer if new_result_buffer else []
 
-    def left_activation(self, t, w):
+    def left_activation(self, t, w, binding=None):
         """
         :type w: rete.WME
         :type t: rete.Token
+        :type binding: dict
         """
-        new_result = Token(t, w, self)
+        new_result = Token(t, w, self, binding)
         owners_t = t
         owners_w = w
         for i in range(self.number_of_conditions):
