@@ -23,12 +23,13 @@ class NegativeNode(BetaNode):
         self.amem = amem
         self.tests = tests if tests else []
 
-    def left_activation(self, token, wme):
+    def left_activation(self, token, wme, binding=None):
         """
         :type wme: rete.WME
         :type token: rete.Token
+        :type binding: dict
         """
-        new_token = Token(token, wme, self)
+        new_token = Token(token, wme, self, binding)
         self.items.append(new_token)
         for item in self.amem.items:
             if self.perform_join_test(new_token, item):

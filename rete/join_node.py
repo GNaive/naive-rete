@@ -1,20 +1,22 @@
-from rete.common import BetaNode
+from rete.common import BetaNode, Has
 
 
 class JoinNode(BetaNode):
 
     kind = 'join-node'
 
-    def __init__(self, children, parent, amem, tests):
+    def __init__(self, children, parent, amem, tests, has):
         """
         :type children:
         :type parent: BetaNode
         :type amem: AlphaMemory
         :type tests: list of TestAtJoinNode
+        :type has: Has
         """
         super(JoinNode, self).__init__(children=children, parent=parent)
         self.amem = amem
         self.tests = tests
+        self.has = has
 
     def right_activation(self, wme):
         """
@@ -22,8 +24,9 @@ class JoinNode(BetaNode):
         """
         for token in self.parent.items:
             if self.perform_join_test(token, wme):
+                binding = self.make_binding(wme)
                 for child in self.children:
-                    child.left_activation(token, wme)
+                    child.left_activation(token, wme, binding)
 
     def left_activation(self, token):
         """
@@ -31,8 +34,9 @@ class JoinNode(BetaNode):
         """
         for wme in self.amem.items:
             if self.perform_join_test(token, wme):
+                binding = self.make_binding(wme)
                 for child in self.children:
-                    child.left_activation(token, wme)
+                    child.left_activation(token, wme, binding)
 
     def perform_join_test(self, token, wme):
         """
@@ -46,6 +50,16 @@ class JoinNode(BetaNode):
             if arg1 != arg2:
                 return False
         return True
+
+    def make_binding(self, wme):
+        """
+        :type wme: WME
+        """
+        binding = {}
+        for field, v in self.has.vars:
+            val = getattr(wme, field)
+            binding[v] = val
+        return binding
 
 
 class TestAtJoinNode:
