@@ -96,7 +96,7 @@ class Ncc(Rule):
 
     @property
     def number_of_conditions(self):
-        return len(filter(lambda x: isinstance(x, Has), self))
+        return len(self)
 
 
 class Filter:

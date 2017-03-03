@@ -25,4 +25,4 @@ def test_ncc():
     c0 = Has('$a', '$b', '$c')
     c1 = Ncc(Has('$x', 'color', 'red'))
     c2 = Ncc(c0, c1)
-    assert c2.number_of_conditions == 1
+    assert c2.number_of_conditions == 2
