@@ -235,9 +235,9 @@ class Network:
         """
         for child in parent.children:
             if isinstance(child, BindNode) and child.tmpl == b.tmpl \
-                    and child.bind == b.bind:
+                    and child.bind == b.to:
                 return child
-        node = BindNode([], parent, b.tmpl, b.bind)
+        node = BindNode([], parent, b.tmpl, b.to)
         parent.children.append(node)
         return node
 

@@ -6,15 +6,15 @@ class BindNode(BetaNode):
 
     kind = 'bind-node'
 
-    def __init__(self, children, parent, tmpl, bind):
+    def __init__(self, children, parent, tmpl, to):
         """
         :type children:
         :type parent: BetaNode
-        :type bind: str
+        :type to: str
         """
         super(BindNode, self).__init__(children=children, parent=parent)
         self.tmpl = tmpl
-        self.bind = bind
+        self.bind = to
 
     def left_activation(self, token, wme, binding=None):
         """
