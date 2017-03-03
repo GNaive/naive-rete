@@ -35,6 +35,12 @@ class Has:
     def __repr__(self):
         return "(%s %s %s)" % (self.identifier, self.attribute, self.value)
 
+    def __eq__(self, other):
+        return self.__class__ == other.__class__ \
+               and self.identifier == other.identifier \
+               and self.attribute == other.attribute \
+               and self.value == other.value
+
     @property
     def vars(self):
         """
@@ -97,11 +103,18 @@ class Filter:
     def __init__(self, tmpl):
         self.tmpl = tmpl
 
+    def __eq__(self, other):
+        return isinstance(other, Filter) and self.tmpl == other.tmpl
+
 
 class Bind:
-    def __init__(self, tmp, bind):
+    def __init__(self, tmp, to):
         self.tmpl = tmp
-        self.bind = bind
+        self.to = to
+
+    def __eq__(self, other):
+        return isinstance(other, Bind) and \
+               self.tmpl == other.tmpl and self.to == other.to
 
 
 class WME:
