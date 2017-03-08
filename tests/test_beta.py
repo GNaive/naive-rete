@@ -192,13 +192,3 @@ def test_ncc():
     assert len(p0.items) == 2
     net.add_wme(WME('B3', 'color', 'red'))
     assert len(p0.items) == 1
-
-
-def test_xrange_op():
-    net = Network()
-    c0 = Has('$x', 'amount', 'in xrange(100, 200)')
-
-    p0 = net.add_production(Rule(c0), gift_sku_id=1)
-    net.add_wme(WME('order-101', 'amount', '150'))
-    assert p0.items
-    assert p0.gift_sku_id == 1
