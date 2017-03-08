@@ -2,9 +2,6 @@
 
 FIELDS = ['identifier', 'attribute', 'value']
 
-OP_EQUAL = 0
-OP_XRANGE = 1
-
 
 class BetaNode(object):
 
@@ -231,9 +228,3 @@ class Token:
 
 def is_var(v):
     return v.startswith('$')
-
-
-def op(v):
-    if v.startswith('in xrange'):
-        return OP_XRANGE
-    return OP_EQUAL
