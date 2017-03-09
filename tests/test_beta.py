@@ -192,3 +192,29 @@ def test_ncc():
     assert len(p0.items) == 2
     net.add_wme(WME('B3', 'color', 'red'))
     assert len(p0.items) == 1
+
+
+def test_black_white():
+    net = Network()
+    c1 = Has('$item', 'cat', '$cid')
+    c2 = Has('$item', 'shop', '$sid')
+    white = Ncc(
+        Neg('$item', 'cat', '100'),
+        Neg('$item', 'cat', '101'),
+        Neg('$item', 'cat', '102'),
+    )
+    n1 = Neg('$item', 'shop', '1')
+    n2 = Neg('$item', 'shop', '2')
+    n3 = Neg('$item', 'shop', '3')
+    p0 = net.add_production(Rule(c1, c2, white, n1, n2, n3))
+    wmes = [
+        WME('item:1', 'cat', '101'),
+        WME('item:1', 'shop', '4'),
+        WME('item:2', 'cat', '100'),
+        WME('item:2', 'shop', '1'),
+    ]
+    for wme in wmes:
+        net.add_wme(wme)
+
+    assert len(p0.items) == 1
+    assert p0.items[0].get_binding('$item') == 'item:1'
