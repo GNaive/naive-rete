@@ -1,4 +1,4 @@
-from rete.common import FIELDS, OP_EQUAL, op, OP_XRANGE
+from rete.common import FIELDS
 
 
 class ConstantTestNode:
@@ -26,11 +26,8 @@ class ConstantTestNode:
         """
         if self.field_to_test != 'no-test':
             v = getattr(wme, self.field_to_test)
-            if op(self.field_must_equal) == OP_EQUAL and v != self.field_must_equal:
+            if v != self.field_must_equal:
                 return False
-            elif op(self.field_must_equal) == OP_XRANGE:
-                if not eval("%s %s" % (v, self.field_must_equal)):
-                    return False
         if self.amem:
             self.amem.activation(wme)
         for child in self.children:

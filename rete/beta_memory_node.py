@@ -13,12 +13,13 @@ class BetaMemory(BetaNode):
         self.items = items if items else []
         self.children = children if children else []
 
-    def left_activation(self, token, wme):
+    def left_activation(self, token, wme, binding=None):
         """
+        :type binding: dict
         :type wme: WME
         :type token: Token
         """
-        new_token = Token(token, wme, node=self)
+        new_token = Token(token, wme, node=self, binding=binding)
         self.items.append(new_token)
         for child in self.children:
             child.left_activation(new_token)

@@ -1,12 +1,15 @@
 # -*- coding: utf-8 -*-
 
 import cStringIO
+
+from rete.bind_node import BindNode
+from rete.filter_node import FilterNode
 from rete.ncc_node import NccNode, NccPartnerNode
 from rete.negative_node import NegativeNode
 from rete.alpha import AlphaMemory, ConstantTestNode
 from rete.join_node import JoinNode, TestAtJoinNode
 from rete.pnode import PNode
-from rete.common import Token, BetaNode, FIELDS, Has, Neg, Rule, Ncc, is_var
+from rete.common import Token, BetaNode, FIELDS, Has, Neg, Rule, Ncc, is_var, Filter, Bind
 from rete.beta_memory_node import BetaMemory
 
 
@@ -129,17 +132,19 @@ class Network:
         return result
 
     @classmethod
-    def build_or_share_join_node(cls, parent, amem, tests):
+    def build_or_share_join_node(cls, parent, amem, tests, has):
         """
+        :type has: Has
         :type parent: BetaNode
         :type amem: AlphaMemory
         :type tests: list of TestAtJoinNode
         :rtype: JoinNode
         """
         for child in parent.children:
-            if isinstance(child, JoinNode) and child.amem == amem and child.tests == tests:
+            if isinstance(child, JoinNode) and child.amem == amem \
+                    and child.tests == tests and child.has == has:
                 return child
-        node = JoinNode([], parent, amem, tests)
+        node = JoinNode([], parent, amem, tests, has)
         parent.children.append(node)
         amem.successors.append(node)
         return node
@@ -211,6 +216,31 @@ class Network:
         self.update_new_node_with_matches_from_above(ncc_partner)
         return ncc_node
 
+    def build_or_share_filter_node(self, parent, f):
+        """
+        :type f: Filter
+        :type parent: BetaNode
+        """
+        for child in parent.children:
+            if isinstance(child, FilterNode) and child.tmpl == f.tmpl:
+                return child
+        node = FilterNode([], parent, f.tmpl)
+        parent.children.append(node)
+        return node
+
+    def build_or_share_bind_node(self, parent, b):
+        """
+        :type b: Bind
+        :type parent: BetaNode
+        """
+        for child in parent.children:
+            if isinstance(child, BindNode) and child.tmpl == b.tmpl \
+                    and child.bind == b.to:
+                return child
+        node = BindNode([], parent, b.tmpl, b.to)
+        parent.children.append(node)
+        return node
+
     def build_or_share_network_for_conditions(self, parent, rule, earlier_conds):
         """
         :type earlier_conds: list of BaseCondition
@@ -228,9 +258,13 @@ class Network:
                 current_node = self.build_or_share_beta_memory(current_node)
                 tests = self.get_join_tests_from_condition(cond, conds_higher_up)
                 am = self.build_or_share_alpha_memory(cond)
-                current_node = self.build_or_share_join_node(current_node, am, tests)
+                current_node = self.build_or_share_join_node(current_node, am, tests, cond)
             elif isinstance(cond, Ncc):
                 current_node = self.build_or_share_ncc_nodes(current_node, cond, conds_higher_up)
+            elif isinstance(cond, Filter):
+                current_node = self.build_or_share_filter_node(current_node, cond)
+            elif isinstance(cond, Bind):
+                current_node = self.build_or_share_bind_node(current_node, cond)
             conds_higher_up.append(cond)
         return current_node
 

@@ -2,9 +2,6 @@
 
 FIELDS = ['identifier', 'attribute', 'value']
 
-OP_EQUAL = 0
-OP_XRANGE = 1
-
 
 class BetaNode(object):
 
@@ -34,6 +31,12 @@ class Has:
 
     def __repr__(self):
         return "(%s %s %s)" % (self.identifier, self.attribute, self.value)
+
+    def __eq__(self, other):
+        return self.__class__ == other.__class__ \
+               and self.identifier == other.identifier \
+               and self.attribute == other.attribute \
+               and self.value == other.value
 
     @property
     def vars(self):
@@ -90,7 +93,25 @@ class Ncc(Rule):
 
     @property
     def number_of_conditions(self):
-        return len(filter(lambda x: isinstance(x, Has), self))
+        return len(self)
+
+
+class Filter:
+    def __init__(self, tmpl):
+        self.tmpl = tmpl
+
+    def __eq__(self, other):
+        return isinstance(other, Filter) and self.tmpl == other.tmpl
+
+
+class Bind:
+    def __init__(self, tmp, to):
+        self.tmpl = tmp
+        self.to = to
+
+    def __eq__(self, other):
+        return isinstance(other, Bind) and \
+               self.tmpl == other.tmpl and self.to == other.to
 
 
 class WME:
@@ -119,10 +140,11 @@ class WME:
 
 class Token:
 
-    def __init__(self, parent, wme, node=None):
+    def __init__(self, parent, wme, node=None, binding=None):
         """
         :type wme: WME
         :type parent: Token
+        :type binding: dict
         """
         self.parent = parent
         self.wme = wme
@@ -131,6 +153,7 @@ class Token:
         self.join_results = []  # used only on tokens in negative nodes
         self.ncc_results = []
         self.owner = None  # Ncc
+        self.binding = binding if binding else {}  # {"$x": "B1"}
 
         if self.wme:
             self.wme.tokens.append(self)
@@ -155,6 +178,23 @@ class Token:
             t = t.parent
             ret.insert(0, t.wme)
         return ret
+
+    def get_binding(self, v):
+        t = self
+        ret = t.binding.get(v)
+        while not ret and t.parent:
+            t = t.parent
+            ret = t.binding.get(v)
+        return ret
+
+    def all_binding(self):
+        path = [self]
+        if path[0].parent:
+            path.insert(0, path[0].parent)
+        binding = {}
+        for t in path:
+            binding.update(t.binding)
+        return binding
 
     @classmethod
     def delete_token_and_descendents(cls, token):
@@ -188,9 +228,3 @@ class Token:
 
 def is_var(v):
     return v.startswith('$')
-
-
-def op(v):
-    if v.startswith('in xrange'):
-        return OP_XRANGE
-    return OP_EQUAL
