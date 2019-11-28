@@ -214,7 +214,7 @@ class Token:
             token.parent.children.remove(token)
         if isinstance(token.node, NegativeNode):
             for jr in token.join_results:
-                jr.wme.negative_join_results.remove(jr)
+                jr.wme.negative_join_result.remove(jr)
         elif isinstance(token.node, NccNode):
             for result_tok in token.ncc_results:
                 result_tok.wme.tokens.remove(result_tok)
