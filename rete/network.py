@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import cStringIO
+from io import StringIO
 
 from rete.bind_node import BindNode
 from rete.filter_node import FilterNode
@@ -50,7 +50,7 @@ class Network:
                     child.left_activation(jr.owner, None)
 
     def dump(self):
-        self.buf = cStringIO.StringIO()
+        self.buf = StringIO()
         self.buf.write('digraph {\n')
         self.dump_beta(self.beta_root)
         self.dump_alpha(self.alpha_root)
