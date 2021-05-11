@@ -3,7 +3,7 @@ from rete.network import Network, Rule
 from rete.common import Has, WME
 
 
-def test_binding_should_not_match():
+def test_recurring_vars_should_not_match():
 
     net = Network()
     c0 = Has('foo', '$x', '$x')
@@ -13,7 +13,7 @@ def test_binding_should_not_match():
     assert len(p0.items) == 0
 
 
-def test_should_match_one():
+def test_recurring_vars_should_match():
 
     net = Network()
     c0 = Has('foo', '$x', '$x')
@@ -23,7 +23,7 @@ def test_should_match_one():
     assert len(p0.items) == 1
 
 
-def test_all_variables():
+def test_recurring_vars_no_constants_should_not_match():
 
     net = Network()
     c0 = Has('$x', '$y', '$y')
@@ -33,7 +33,7 @@ def test_all_variables():
     assert len(p0.items) == 0
 
 
-def test_all_variables_the_same_should_match():
+def test_recurring_vars_no_constants_should_match():
 
     net = Network()
     c0 = Has('$x', '$x', '$x')
@@ -106,17 +106,6 @@ def test_multiple_conditions_all_variables_should_match_one():
     c3 = Has('foo', '$x', 'foo')
     c4 = Has('$x', 'foo', '$x')
     p0 = net.add_production(Rule(c0, c1, c2, c3, c4))
-    net.add_wme(WME('foo', 'foo', 'foo'))
-
-    assert len(p0.items) == 1
-
-
-def test_multiple_conditions_all_variables_should_match_one_2():
-
-    net = Network()
-    c0 = Has('$x', '$x', '$x')
-    c1 = Has('foo', '$x', 'foo')
-    p0 = net.add_production(Rule(c0, c1))
     net.add_wme(WME('foo', 'foo', 'foo'))
 
     assert len(p0.items) == 1
