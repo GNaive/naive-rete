@@ -6,7 +6,7 @@ from rete.bind_node import BindNode
 from rete.filter_node import FilterNode
 from rete.ncc_node import NccNode, NccPartnerNode
 from rete.negative_node import NegativeNode
-from rete.alpha import AlphaMemory, ConstantTestNode
+from rete.alpha import AlphaMemory, ConstantTestNode, VarConsistencyTestNode
 from rete.join_node import JoinNode, TestAtJoinNode
 from rete.pnode import PNode
 from rete.common import Token, BetaNode, FIELDS, Has, Neg, Rule, Ncc, is_var, Filter, Bind
@@ -96,17 +96,40 @@ class Network:
         if node == self.beta_root:
             self.buf.write("    }\n")
 
+
+    @staticmethod
+    def build_or_share_var_consistency_test_node(node, variables):
+        for var, slots in variables.items():
+            if len(slots) > 1:
+                node = VarConsistencyTestNode.build_or_share(node, var, slots)
+
+        return node
+
     def build_or_share_alpha_memory(self, condition):
         """
         :type condition: Condition
         :rtype: AlphaMemory
         """
-        path = []
+        constants = []
+        variables = {}
+
         for f in FIELDS:
             v = getattr(condition, f)
             if not is_var(v):
-                path.append((f, v))
-        am = ConstantTestNode.build_or_share_alpha_memory(self.alpha_root, path)
+                constants.append((f, v))
+            else:
+                variables.setdefault(v, []).append(f)
+
+        if len(constants) == 0:
+            node = self.build_or_share_var_consistency_test_node(self.alpha_root, variables)
+        else:
+            node = self.alpha_root
+
+        am = ConstantTestNode.build_or_share_alpha_memory(
+            node,
+            constants,
+            variables
+        )
         for w in self.alpha_root.amem.items:
             if condition.test(w):
                 am.activation(w)
