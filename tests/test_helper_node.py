@@ -33,17 +33,17 @@ def test_filter_compare():
 def test_bind():
     net = Network()
     c0 = Has('spu:1', 'sales', '$x')
-    b0 = Bind('len(set($x) & set(xrange(1, 100)))', '$num')
+    b0 = Bind('len(set($x) & set(range(1, 100)))', '$num')
     f0 = Filter('$num > 0')
     p0 = net.add_production(Rule(c0, b0, f0))
 
-    b1 = Bind('len(set($x) & set(xrange(100, 200)))', '$num')
+    b1 = Bind('len(set($x) & set(range(100, 200)))', '$num')
     p1 = net.add_production(Rule(c0, b1, f0))
 
-    b2 = Bind('len(set($x) & set(xrange(300, 400)))', '$num')
+    b2 = Bind('len(set($x) & set(range(300, 400)))', '$num')
     p2 = net.add_production(Rule(c0, b2, f0))
 
-    net.add_wme(WME('spu:1', 'sales', 'xrange(50, 110)'))
+    net.add_wme(WME('spu:1', 'sales', 'range(50, 110)'))
 
     assert len(p0.items) == 1
     assert len(p1.items) == 1
